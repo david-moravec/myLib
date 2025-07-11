@@ -87,6 +87,13 @@ DEFINE_DICT(test_struct, TestStruct);
 void test_dict_init() {
   Dict dict;
   dict_test_struct_init(&dict);
+
+  for (int i = 0; i < dict.capacity; i++) {
+    struct Entry *entry = list_get(&dict.container.list, i);
+    assert(entry->hash == 0);
+    assert(entry->key == 0);
+    assert(entry->value == NULL);
+  }
 }
 
 void test_dict_set_get() {
@@ -98,9 +105,10 @@ void test_dict_set_get() {
   data.field2 = "ahoj";
   data.pointer = malloc(1024 * sizeof(char));
 
-  assert(dict.list.count == 0);
+  assert(dict.count == 0);
+  struct Entry *entries = dict.container.list.data;
   dict_test_struct_set(&dict, "testKey1", &data);
-  assert(dict.list.count == 1);
+  assert(dict.count == 1);
 
   TestStruct *data_obtained;
   assert(!dict_test_struct_get(&dict, "testKey2", &data_obtained));

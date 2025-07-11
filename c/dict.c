@@ -23,9 +23,9 @@ static struct Entry *find_entry(struct list_Entry *entries, size_t capacity,
   int index = hash % capacity;
 
   for (;;) {
-    struct Entry *entry = &entries->list.data[index];
+    struct Entry *entry = list_Entry_get(entries, index);
 
-    if (entry->hash == -1) {
+    if (entry->hash == 0) {
       if (entry->value == NULL) {
         return entry;
       }
@@ -41,7 +41,7 @@ static struct Entry *find_entry(struct list_Entry *entries, size_t capacity,
 }
 
 static void grow_dict(Dict *dict) {
-  int old_capacity = dict->list.size;
+  int old_capacity = dict->container.list.size;
   int new_cap = 2 * old_capacity;
   struct list_Entry entries;
   list_Entry_init(&entries, new_cap);
@@ -49,13 +49,13 @@ static void grow_dict(Dict *dict) {
   for (int i = 0; i < new_cap; i++) {
     struct Entry *entry = &entries.list.data[i];
     entry->hash = -1;
-    entry->key = NULL;
+    entry->key = 0;
     entry->value = NULL;
   }
 
   // copy existing
-  for (int i = 0; i < dict->list.size; i++) {
-    struct Entry *entry = &dict->list.data[i];
+  for (int i = 0; i < dict->container.list.size; i++) {
+    struct Entry *entry = &dict->container.list.data[i];
 
     if (entry->hash == -1)
       continue;
@@ -65,20 +65,21 @@ static void grow_dict(Dict *dict) {
     dest->value = entry->value;
   }
 
-  list_Entry_free(dict);
-  dict->list = entries.list;
+  list_Entry_free(&dict->container);
+  dict->container.list = entries.list;
+  dict->capacity = new_cap;
 }
 
 bool dict_get(Dict *dict, const char *key, void *value) {
-  struct Entry *entry =
-      find_entry(dict, dict->list.size, hashString(key, strlen(key)));
+  struct Entry *entry = find_entry(&dict->container, dict->container.list.size,
+                                   hashString(key, strlen(key)));
 
-  if (entry == NULL) {
+  if (entry == NULL || entry->key == 0 && entry->hash == 0) {
     return false;
   }
 
   // assign pointer address
-  memcpy(value, entry, sizeof(void *));
+  memcpy(value, &entry->value, sizeof(void *));
   return true;
 }
 
@@ -94,16 +95,17 @@ bool dict_get_copy(Dict *dict, const char *key, void *value, size_t val_size) {
 }
 
 bool dict_set(Dict *dict, const char *key, void *value) {
-  if (dict->list.size + 1 > MAX_LOAD_FACTOR * dict->list.size) {
+  if (dict->count + 1 > MAX_LOAD_FACTOR * dict->capacity) {
     grow_dict(dict);
   }
   uint32_t hash = hashString(key, strlen(key));
-  struct Entry *entry = find_entry(dict, dict->list.size, hash);
+  struct Entry *entry =
+      find_entry(&dict->container, dict->container.list.size, hash);
 
-  bool newEntry = entry->hash == -1;
+  bool newEntry = entry->key == 0;
 
-  if (newEntry && entry->key == NULL) {
-    dict->list.count++;
+  if (newEntry && entry->value == NULL) {
+    dict->count++;
   }
 
   entry->key = key;
@@ -119,5 +121,17 @@ bool dict_set_copy(Dict *dict, const char *key, void *value, size_t val_size) {
   return dict_set(dict, key, value);
 }
 
-void dict_init(Dict *dict) { list_Entry_init(dict, 8); }
-void dict_free(Dict *dict) { list_Entry_free(dict); }
+void dict_init(Dict *dict) {
+  list_Entry_init(&dict->container, 8);
+  for (size_t i = 0; i < dict->container.list.size; i++) {
+    struct Entry *entry = &dict->container.list.data[i];
+    entry->hash = 0;
+    entry->key = 0;
+    entry->value = NULL;
+    dict->container.list.count++;
+  };
+
+  dict->capacity = 8;
+  dict->count = 0;
+}
+void dict_free(Dict *dict) { list_Entry_free(&dict->container); }
