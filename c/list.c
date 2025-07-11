@@ -54,10 +54,13 @@ void check_grow_list(struct list *list) {
 void *list_append(struct list *list, size_t *index) {
   check_grow_list(list);
 
-  *index = list->count;
+  if (index != NULL) {
+    *index = list->count;
+  }
+
   list->count++;
 
-  return list_get(list, *index);
+  return list_get(list, list->count - 1);
 }
 
 void *list_append_copy(struct list *list, void *element, size_t *index) {
