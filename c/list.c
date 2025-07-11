@@ -16,7 +16,7 @@ void list_init(struct list *list, size_t el_size, size_t init_size) {
   memset(list->data, 0, list->el_size * list->size);
 }
 
-void free_list(struct list *list) {
+void list_free(struct list *list) {
   free(list->data);
   list->data = NULL;
   list->el_size = 0;

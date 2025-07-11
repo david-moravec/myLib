@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dict.h"
 #include "list.h"
 
 typedef struct {
@@ -35,7 +36,7 @@ void test_list_grow() {
   assert(list.size == 8);
   assert(list.el_size == sizeof(int));
   list_grow(&list);
-  assert(list.size == 64);
+  assert(list.size == 16);
 }
 
 void test_list_append() {
@@ -75,10 +76,45 @@ void test_list_append_copy() {
   assert(d == data);
 }
 
+typedef struct {
+  int field1;
+  const char *field2;
+  void *pointer;
+} TestStruct;
+
+DEFINE_DICT(test_struct, TestStruct);
+
+void test_dict_init() {
+  Dict dict;
+  dict_test_struct_init(&dict);
+}
+
+void test_dict_set_get() {
+  Dict dict;
+  dict_test_struct_init(&dict);
+
+  TestStruct data;
+  data.field1 = 25;
+  data.field2 = "ahoj";
+  data.pointer = malloc(1024 * sizeof(char));
+
+  assert(dict.list.count == 0);
+  dict_test_struct_set(&dict, "testKey1", &data);
+  assert(dict.list.count == 1);
+
+  TestStruct *data_obtained;
+  assert(!dict_test_struct_get(&dict, "testKey2", &data_obtained));
+  assert(dict_test_struct_get(&dict, "testKey1", &data_obtained));
+  assert(data_obtained == &data);
+}
+
 int main() {
   test_list_init();
   test_list_grow();
   test_list_append();
   test_list_append_copy();
+
+  test_dict_init();
+  test_dict_set_get();
   return 0;
 }

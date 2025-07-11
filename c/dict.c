@@ -1,7 +1,7 @@
 #include <string.h>
 
-#include "../list/list.h"
 #include "dict.h"
+#include "list.h"
 
 LIST_FUNCS_DEFINE(Entry, struct Entry);
 
@@ -67,6 +67,30 @@ static void grow_dict(Dict *dict) {
 
   list_Entry_free(dict);
   dict->list = entries.list;
+}
+
+bool dict_get(Dict *dict, const char *key, void *value) {
+  struct Entry *entry =
+      find_entry(dict, dict->list.size, hashString(key, strlen(key)));
+
+  if (entry == NULL) {
+    return false;
+  }
+
+  // assign pointer address
+  memcpy(value, entry, sizeof(void *));
+  return true;
+}
+
+bool dict_get_copy(Dict *dict, const char *key, void *value, size_t val_size) {
+  void **val = NULL;
+
+  if (dict_get(dict, key, val)) {
+    memcpy(value, val, val_size);
+    return true;
+  }
+
+  return false;
 }
 
 bool dict_set(Dict *dict, const char *key, void *value) {
