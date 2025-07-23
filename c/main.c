@@ -6,6 +6,7 @@
 
 #include "dict.h"
 #include "list.h"
+#include "util.h"
 
 typedef struct {
   uint64_t a;
@@ -116,6 +117,30 @@ void test_dict_set_get() {
   assert(data_obtained == &data);
 }
 
+static comparison compare_func(TestingStruct a, TestingStruct b) {
+  RETURN_COMPARE(a.a, b.a);
+}
+
+void test_bubblesort() {
+  listTest list;
+  list_test_init(&list, 256);
+
+  for (int i = 0; i < 1024; i++) {
+    TestingStruct data;
+    data.a = 1024 - i;
+    data.b = 10;
+    data.c = NULL;
+    memcpy(list_test_append(&list, NULL), &data, sizeof(TestingStruct));
+  }
+  bubblesort((TestingStruct *)list.list.data, list.list.count, compare_func,
+             TestingStruct);
+
+  for (int i = 0; i < 1024; i++) {
+    TestingStruct *element = list_test_get(&list, i);
+    assert(element->a == i + 1);
+  }
+}
+
 int main() {
   test_list_init();
   test_list_grow();
@@ -124,5 +149,7 @@ int main() {
 
   test_dict_init();
   test_dict_set_get();
+
+  test_bubblesort();
   return 0;
 }
